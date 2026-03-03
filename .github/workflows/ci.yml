@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: sudo apt-get install -y libreadline-dev
+
+      - name: Build
+        run: make
+
+      - name: Check binary exists
+        run: test -f hsh && echo "Build successful"
+
+      - name: Run static analysis
+        run: |
+          sudo apt-get install -y cppcheck
+          cppcheck --error-exitcode=1 --suppress=missingIncludeSystem src/
