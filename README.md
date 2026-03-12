@@ -89,3 +89,5 @@ make test
 ## License
 
 MIT
+
+<!-- Last reviewed: March 2026 -->
