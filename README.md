@@ -1,93 +1,56 @@
 # unix-shell
 
-A POSIX-compliant Unix shell implemented from scratch in C. Supports the core features you'd expect from a real shell — pipes, I/O redirection, background jobs, signal handling, and a set of built-in commands.
-
-Written as a deep dive into Unix process management, file descriptors, and the exec family of syscalls.
+A POSIX-compliant Unix shell implemented from scratch in **C**, supporting the core features of a production shell.
 
 ## Features
 
-- **Command execution** — fork/exec with PATH resolution
-- **Pipes** — arbitrary pipeline chains (`cmd1 | cmd2 | cmd3`)
-- **I/O redirection** — `>`, `>>`, `<`, `2>`, `2>&1`
-- **Background jobs** — `cmd &` with job table tracking
-- **Job control** — `jobs`, `fg`, `bg`, `Ctrl-Z` (SIGTSTP)
-- **Signal handling** — `SIGINT`, `SIGQUIT`, `SIGCHLD` handled correctly
-- **Built-ins** — `cd`, `pwd`, `exit`, `export`, `unset`, `jobs`, `fg`, `bg`, `history`
-- **Environment variables** — `$VAR` expansion, `export`, `unset`
-- **Command history** — up/down arrow navigation (via readline)
-- **Quoting** — single quotes, double quotes, backslash escaping
+- **Pipelines** — chain commands with `|`, correctly wiring stdout → stdin across processes
+- **I/O Redirection** — `>`, `>>`, `<` for file-based input/output
+- **Background Jobs** — run processes with `&` and track them
+- **Signal Handling** — proper `SIGINT`, `SIGTSTP`, `SIGCHLD` handling
+- **Job Control** — `fg`, `bg`, `jobs` builtins to manage stopped/background processes
+- **Built-in Commands** — `cd`, `exit`, `jobs`, `fg`, `bg`
+- **Process Groups** — each pipeline runs in its own process group for correct signal delivery
 
-## Building
+## Build & Run
 
 ```bash
 git clone https://github.com/Harsh7115/unix-shell
 cd unix-shell
 make
-./hsh
+./shell
 ```
 
-Requires: GCC, GNU Make, readline (`sudo apt install libreadline-dev` on Ubuntu)
-
-## Usage
+## Usage Examples
 
 ```bash
-# Basic command
-$ ls -la
-
 # Pipeline
-$ cat /etc/passwd | grep root | cut -d: -f1
+ls -la | grep ".c" | wc -l
 
-# Redirection
-$ gcc main.c -o prog 2> build.log
-$ ./prog < input.txt > output.txt
+# I/O redirection
+cat input.txt | sort > output.txt
 
 # Background job
-$ sleep 60 &
-[1] 12345
+sleep 10 &
+jobs        # list background jobs
+fg %1       # bring job 1 to foreground
 
-# Job control
-$ jobs
-[1]+ Running    sleep 60 &
-$ fg 1
+# Nested pipes
+cat file.txt | tr 'a-z' 'A-Z' | rev
 ```
 
-## Architecture
+## Implementation Details
 
-```
-unix-shell/
-├── src/
-│   ├── main.c          # REPL loop, readline integration
-│   ├── lexer.c         # Tokeniser (handles quoting, escaping)
-│   ├── parser.c        # Builds command tree from tokens
-│   ├── executor.c      # fork/exec, pipes, redirections
-│   ├── builtins.c      # cd, export, jobs, fg, bg, history …
-│   ├── jobs.c          # Job table, SIGCHLD handler
-│   ├── signals.c       # Signal setup for interactive shell
-│   └── env.c           # Environment variable management
-├── include/
-│   ├── shell.h         # Shared types and prototypes
-│   └── jobs.h
-├── tests/
-│   └── run_tests.sh    # Integration tests
-├── Makefile
-└── README.md
-```
+- **`fork` / `execvp`** for process spawning
+- **`pipe(2)`** system call for inter-process communication
+- **`waitpid`** with `WNOHANG` for non-blocking child reaping
+- **`tcsetpgrp`** for terminal control handoff to foreground process group
+- Tokenizer handles quoted strings, escape characters, and whitespace
 
-## Implementation Notes
+## Tech Stack
 
-- Uses `waitpid(WNOHANG)` in the SIGCHLD handler to reap background children without blocking
-- Pipes are built left-to-right: each stage creates a `pipe(2)` pair, the left child writes to `pipefd[1]` and the right reads from `pipefd[0]`
-- The shell forks a separate **process group** for each pipeline so `Ctrl-C` only kills the foreground job, not the shell itself
-- Readline callbacks set the terminal back to canonical mode before exec so child processes see a normal tty
+C · POSIX APIs · GNU Make
 
-## Running Tests
+---
 
-```bash
-make test
-```
-
-## License
-
-MIT
-
-<!-- Last reviewed: March 2026 -->
+Built to understand how shells actually work — from `fork/exec` to job control and signal semantics.
